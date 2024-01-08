@@ -1,26 +1,31 @@
 ---
 
-name: Build Operator Image
+name: Release Operator Image
 
+
+# on:
+#   push:
+#     branches: [main]
 
 on:
-  push:
-    branches: [main]
+  release:
+    types: [published]
 
 env:
   IMAGE: "ghcr.io/${{ github.repository_owner }}/eda-server-operator:${{ github.sha }}"
-  PUBLISH_IMAGE: "ghcr.io/${{ github.repository_owner }}/eda-server-operator:quay-test"
+  #PUBLISH_IMAGE: "quay.io/eda-server-operator:${{ github.event.release.tag_name }}"
+  PUBLISH_IMAGE: "ghcr.io/${{ github.repository_owner }}/eda-server-operator:${{ github.event.release.tag_name }}"
+  
+
 
 jobs:
 
   docker-build:
     runs-on: ubuntu-latest
-    name: Build Current Commit
+    name: Publish Current Commit
     steps:
+      # - uses: actions/checkout@v2
 
-      - uses: actions/checkout@v2
-
-        # ToDo: remove this step as it's for testing only
       - name: Log into registry ghcr.io
         if: github.event_name != 'pull_request'
         uses: docker/login-action@343f7c4344506bcbf9b4de18042ae17996df046d # v3.0.0
@@ -29,16 +34,20 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build and Store Image @ghcr
-        run: |
-          IMG=${{ env.IMAGE }} make docker-buildx
 
-      - name: Publish to quay.io/eda-server-operator:main
+      # - name: Log into registry quay.io
+      #   if: github.event_name != 'pull_request'
+      #   uses: docker/login-action@343f7c4344506bcbf9b4de18042ae17996df046d # v3.0.0
+      #   with:
+      #     registry: quay.io
+      #     username: ${{ secrets.QUAY_USER }}
+      #     password: ${{ secrets.QUAY_TOKEN }}
+
+
+      - name: Pull Stored Image and Publish to quay.io
         run: |
           docker buildx imagetools create ${{ env.IMAGE }} --tag ${{ env.PUBLISH_IMAGE }}
 
-
-        # Not required as buildx pushes image too
       # - name: Push To Quay
       #   uses: redhat-actions/push-to-registry@v2.1.1
       #   with:
